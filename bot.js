@@ -1,30 +1,20 @@
-require("dotenv").config();
-const {
-  Client,
-  GatewayIntentBits,
-  Partials,
-  ChannelType,
-} = require("discord.js");
+import fetch from "node-fetch";
+import dotenv from "dotenv";
+dotenv.config();
+import cron from "node-cron";
 
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
+import { Client, GatewayIntentBits, ChannelType, Partials } from "discord.js";
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.DirectMessages,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions, // Add this intent
+    GatewayIntentBits.GuildMembers,
   ],
-  partials: [
-    Partials.Message, // Add Message partial
-    Partials.Channel, // Keep Channel partial
-    Partials.Reaction, // Add Reaction partial
-  ],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
-
 // MAIN STUFF HERE
 
 // Validation helpers
@@ -577,26 +567,41 @@ client.on("messageCreate", async (message) => {
   }
 });
 
+import cron from "node-cron";
+
+cron.schedule(
+  "0 7 * * *",
+  async () => {
+    try {
+      const response = await fetch("https://zenquotes.io/api/random");
+      const data = await response.json();
+
+      if (!data || !data[0]) {
+        console.log("No quote received.");
+        return;
+      }
+
+      const quote = data[0].q;
+      const author = data[0].a;
+
+      const channel = await client.channels.fetch(process.env.QUOTE_CHANNEL_ID);
+      if (channel) {
+        channel.send(`📜 "${quote}" — *${author}*`);
+        console.log("Daily quote sent.");
+      } else {
+        console.log("Channel not found.");
+      }
+    } catch (error) {
+      console.error("Error fetching or sending daily quote:", error);
+    }
+  },
+  {
+    timezone: "America/Denver", // Denver timezone (MST/MDT with DST)
+  }
+);
+
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
 client.login(process.env.BOT_TOKEN);
-
-// client.on("messageCreate", (message) => {
-//   console.log("Message received:", message.content); // Debug: log the message
-
-//   if (message.author.bot) return; // Ignore messages from other bots
-
-//   // Trim and convert to lowercase for case-insensitive checking
-//   const cleanedMessage = message.content.trim().toLowerCase();
-
-//   // Check if the message contains exactly "!workflow" and nothing else
-//   if (cleanedMessage === "!workflow") {
-//     message.reply("You got this jackson! Keep it up!");
-//   }
-//   // Check if the message contains "!workflow" anywhere in the sentence
-//   else if (cleanedMessage.includes("!workflow")) {
-//     message.reply("Yay Jackson You got this! Keep it up!");
-//   }
-// });
