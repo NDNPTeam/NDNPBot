@@ -567,8 +567,6 @@ client.on("messageCreate", async (message) => {
   }
 });
 
-import cron from "node-cron";
-
 cron.schedule(
   "0 7 * * *",
   async () => {
